@@ -1,0 +1,407 @@
+DEG2RAD = pi/180.0;
+
+subroutine pm3d_formula( x, formula ){
+    # inverted range
+    if(formula<0){
+        x = 1.0-x;
+        formula = -formula;
+    }
+
+    if(formula == 0 ){ return 0;}
+    if(formula == 1){ return 0.5; }
+    if(formula == 2){ return 1; }
+    if(formula == 3){ return x; }
+    if(formula == 5){ return x**5; }
+    if(formula == 6){ return x**6; }
+    if(formula == 7){ return sqrt(x); }
+    if(formula == 8){ return x**0.25; }
+    if(formula == 9){ return sin(90*x*DEG2RAD); }
+    if(formula == 10){ return cos(90*x*DEG2RAD); }
+    if(formula == 11){ return abs(x-0.5); }
+    if(formula == 12){ return (2*x-1)**2; }
+    if(formula == 13){ return sin(180*x*DEG2RAD); }
+    if(formula == 14){ return abs(cos(180*x*DEG2RAD)); }
+    if(formula == 15){ return sin(360*x*DEG2RAD); }
+    if(formula == 16){ return cos(360*x*DEG2RAD); }
+    if(formula == 17){ return abs(sin(360*x*DEG2RAD)); }
+    if(formula == 18){ return abs(sin(360*x*DEG2RAD)); }
+    if(formula == 19){ return abs(sin(720*x*DEG2RAD)); }
+    if(formula == 20){ return abs(cos(720*x*DEG2RAD)); }
+    if(formula == 21){ return 3*x; }
+    if(formula == 22){ return 3*x-1; }
+    if(formula == 23){ return 3*x-2; }
+    if(formula == 24){ return abs(3*x-1); }
+    if(formula == 25){ return abs(3*x-2); }
+    if(formula == 26){ return 1.5*x-0.5; }
+    if(formula == 27){ return 1.5*x-1.0; }
+    if(formula == 28){ return abs(1.5*x-0.5); }
+    if(formula == 29){ return abs(1.5*x-1.0); }
+    if(formula == 30){
+        if(x <= 0.25){ return 0.0;}
+        if(x >= 0.57){ return 1.0;}
+        return x/0.32 - 0.78125;
+    }
+    if(formula == 31){
+        if(x <= 0.42){ return 0.0;}
+        if(x >= 0.92){ return 1.0;}
+        return x*2 - 0.84;
+    }
+    if(formula == 32){
+        if(x <= 0.42){ return 0.0;}
+        if(x >= 0.92){ return 1.0;}
+        return x/0.08 - 11.5;
+    }
+    if(formula == 33){ return abs(2*x) - 0.5; }
+    if(formula == 34){ return 2*x; }
+    if(formula == 35){ return 2*x - 0.5; }
+    if(formula == 36){ return 2*x - 1; }
+}
+
+gaussian(c1,x0,sigma) = exp(-(c1-x0)*(c1-x0)/(2.0*sigma*sigma))
+
+ColMapper = module();
+
+ColMapper.config = {  'type': 'rgb' ,                     \
+                      'exponent': 0.7,                    \
+                      'rgbformulae': [7,5,10],            \
+                      'invert' : true,                    \
+                      'gausspos' : [0.0, 0.5, 1.0],       \
+                      'widths' : [0.4, 0.4, 0.4],         \
+                      'brightness' : 0.4                  }
+
+subroutine ColMapper.init( dic ){
+    # load default configuration
+    n = len(dic.values())
+    if(n >= 1){
+        for i = 0 to n-1 {
+            self.config[ dic.keys()[i] ] = dic.values()[ i ];
+        }
+    }
+}
+
+subroutine ColMapper.gradient_cmyk(mincol,maxcol,x){
+    mincol_val = mincol.componentsCMYK()
+    maxcol_val = maxcol.componentsCMYK()
+    return cmyk(maxcol_val[0]*x + mincol_val[0]*(1 - x),    \
+                maxcol_val[1]*x + mincol_val[1]*(1 - x),    \
+                maxcol_val[2]*x + mincol_val[2]*(1 - x),    \
+                maxcol_val[3]*x + mincol_val[3]*(1 - x))
+}
+
+subroutine ColMapper.gradient_hsb(mincol,maxcol,x){
+    mincol_val = mincol.componentsHSB()
+    maxcol_val = maxcol.componentsHSB()
+    return hsb( maxcol_val[0]*x + mincol_val[0]*(1 - x),    \
+                maxcol_val[1]*x + mincol_val[1]*(1 - x),    \
+                maxcol_val[2]*x + mincol_val[2]*(1 - x))
+}
+
+subroutine ColMapper.gradient_rgb(mincol,maxcol,x){
+    mincol_val = mincol.componentsRGB()
+    maxcol_val = maxcol.componentsRGB()
+    return rgb( maxcol_val[0]*x + mincol_val[0]*(1 - x),    \
+                maxcol_val[1]*x + mincol_val[1]*(1 - x),    \
+                maxcol_val[2]*x + mincol_val[2]*(1 - x))
+}
+
+subroutine ColMapper.gradient_cmyk(mincol, maxcol, x){
+    mincol_val = mincol.componentsCMYK()
+    maxcol_val = maxcol.componentsCMYK()
+    return cmyk( maxcol_val[0]*x + mincol_val[0]*(1 - x),    \
+                 maxcol_val[1]*x + mincol_val[1]*(1 - x),    \
+                 maxcol_val[2]*x + mincol_val[2]*(1 - x))
+}
+
+subroutine ColMapper.pm3d(c1){
+    if( self.config["invert"] ){ c1 = 1.0 - c1; }
+    c1 = c1**self.config["exponent"]
+    if (self.config["type"] == 'rgb'){
+        return rgb( pm3d_formula( c1,self.config['rgbformulae'][0] ),   \
+                    pm3d_formula( c1,self.config['rgbformulae'][1] ),   \
+                    pm3d_formula( c1,self.config['rgbformulae'][2] ) )
+    } else{
+        return hsb(pm3d_formula( c1,self.config['rgbformulae'][0] ),    \
+                   pm3d_formula( c1,self.config['rgbformulae'][1] ),    \
+                   pm3d_formula( c1,self.config['rgbformulae'][2] ) )
+    }
+}
+
+subroutine ColMapper.Gauss(c1){
+    if( self.config["invert"] ){ c1 = 1.0 - c1; }
+    c1 = c1**self.config["exponent"]
+    if( self.config["type"] == 'rgb' ){
+        return rgb( gaussian(c1, self.config["gausspos"][0],self.config["widths"][0]), \
+                    gaussian(c1, self.config["gausspos"][1],self.config["widths"][1]), \
+                    gaussian(c1, self.config["gausspos"][2],self.config["widths"][2]) )
+    } else {
+        return hsb( gaussian(c1, self.config["gausspos"][0],self.config["widths"][0]), \
+                    gaussian(c1, self.config["gausspos"][1],self.config["widths"][1]), \
+                    gaussian(c1, self.config["gausspos"][2],self.config["widths"][2]) )
+    }
+}
+
+subroutine ColMapper.Red(c1){
+    if( self.config["invert"] ){ c1 = 1.0 - c1; }
+    c1 = c1**self.config["exponent"]
+    if( self.config["type"] == 'rgb' ){
+        return rgb( 1.0-c1*self.config["brightness"],\
+                    1.0-c1,                          \
+                    1.0-c1 )
+    } else {
+        return hsb( 1.0-c1*self.config["brightness"],\
+                    1.0-c1,                          \
+                    1.0-c1 )
+    }
+}
+
+subroutine ColMapper.Red2(c1){
+    if( self.config["invert"] ){ c1 = 1.0 - c1; }
+    c1 = c1**self.config["exponent"]
+    if( self.config["type"] == 'rgb' ){
+        return rgb( c1*(1.0-self.config["brightness"]),\
+                    0.0,                               \
+                    0.0 )
+    } else {
+        return hsb( c1*(1.0-self.config["brightness"]),\
+                    0.0,                               \
+                    0.0 )
+    }
+}
+
+subroutine ColMapper.Green(c1){
+    if( self.config["invert"] ){ c1 = 1.0 - c1; }
+    c1 = c1**self.config["exponent"]
+    if( self.config["type"] == 'rgb' ){
+        return rgb( 1.0 - c1,                            \
+                    1.0 - c1*self.config["brightness"],  \
+                    1.0 - c1 )
+    } else {
+        return hsb( 1.0 - c1,                            \
+                    1.0 - c1*self.config["brightness"],  \
+                    1.0 - c1 )
+    }
+}
+
+subroutine ColMapper.Blue(c1){
+    if( self.config["invert"] ){ c1 = 1.0 - c1; }
+    c1 = c1**self.config["exponent"]
+    if( self.config["type"] == 'rgb' ){
+        return rgb( 1.0 - c1,                       \
+                    1.0 - c1,                       \
+                    1.0 - c1*self.config["brightness"])
+    } else {
+        return hsb( 1.0 - c1,                       \
+                    1.0 - c1,                       \
+                    1.0 - c1*self.config["brightness"])
+    }
+}
+
+subroutine ColMapper.Blue2(c1){
+    if( self.config["invert"] ){ c1 = 1.0 - c1; }
+    c1 = c1**self.config["exponent"]
+    if( self.config["type"] == 'rgb' ){
+        return rgb( 0.0,                            \
+                    0.0,                            \
+                    c1*(1.0 - self.config["brightness"]) )
+    } else {
+        return hsb( 0.0,                            \
+                    0.0,                            \
+                    c1*(1.0 - self.config["brightness"]) )
+    }
+}
+
+subroutine ColMapper.YellowRed(c1){
+    if( self.config["invert"] ){ c1 = 1.0 - c1; }
+    c1 = c1**self.config["exponent"]
+    if( self.config["type"] == 'rgb' ){
+        return rgb( 1.0,                            \
+                    1.0-c1,                         \
+                    (1.0-c1)*self.config["brightness"]   )
+    } else {
+        return hsb( 1.0,                            \
+                    1.0-c1,                         \
+                    (1.0-c1)*self.config["brightness"]   )
+    }
+}
+
+subroutine ColMapper.WYRK1(c1){
+    # Blue yellow red black colormap
+    if( self.config["invert"] ){ c1 = 1.0 - c1; }
+    c1 = c1**self.config["exponent"]
+
+    if( c1 < 0.5){
+        b = 0.0
+    } else {
+        b = (c1-0.5)*2.0
+    }
+
+    if(c1 < 0.25){
+        g = 0.0
+    } else if(c1 < 0.75){
+        g = (c1-0.25)*2.0
+    } else {
+        g = 1.0
+    }
+
+    if(c1 > 0.5){
+        r = 1.0
+    } else {
+        r = c1*2.0
+    }
+
+    if( self.config["type"] == 'rgb' ){
+        return rgb( r, g, b )
+    } else {
+        return hsb( r, g, b )
+    }
+}
+
+subroutine ColMapper.WYRK2(c1){
+    # Blue yellow red black colormap
+    if( self.config["invert"] ){ c1 = 1.0 - c1; }
+    c1 = c1**self.config["exponent"]
+
+    if( c1 < 0.5){
+        b = 0.0
+    } else {
+        b = (c1-0.5)*2.0
+    }
+
+    if(c1 < 0.15){
+        g = 0.0
+    } else if(c1 < 0.75){
+        g = (c1-0.15)/(0.75-0.15)
+    } else {
+        g = 1.0
+    }
+
+    if(c1 > 0.3){
+        r = 1.0
+    } else {
+        r = c1/0.3
+    }
+
+    if( self.config["type"] == 'rgb' ){
+        return rgb( r, g, b )
+    } else {
+        return hsb( r, g, b )
+    }
+}
+
+subroutine ColMapper.BlueWhiteRed(x){
+    if( self.config["invert"] ){ x = 1.0 - x; }
+    x = x**self.config["exponent"]
+    r = 0
+    b = 0
+    g = 0
+    if( x > 0.25 and x <= 0.50){
+        r = (x-0.25)*4
+    } else if( x > 0.5 and x <= 0.75){
+        r = 1.0
+    } else if (x > 0.75) {
+        r = 1-(123/255.)*4*(x - 0.75)
+    }
+
+    if( x > 0.25 and x <= 0.5){
+        g = (x - 0.25)*4;
+    } else if(x > 0.5 and x <= 0.75){
+        g = 1 -4*(x-0.5);
+    } else if(x > 0.75){
+        g = 0;
+    }
+
+    if(x <= 0.25){
+        b = 132./255 + (123./255)*4*x;
+    } else if(x > 0.25 and x <= 0.5){
+        b = 1.0;
+    } else if( x > 0.5 and x <= 0.75){
+        b = 1.0 - 4*(x - 0.5);
+    } else {
+        b = 0.0;
+    }
+
+    if( self.config["type"] == 'rgb' ){
+        return rgb( r, g, b )
+    } else {
+        return hsb( r, g, b )
+    }
+
+}
+
+subroutine ColMapper.BlackYellow(x){
+    if( self.config["invert"] ){ x = 1.0 - x; }
+    x = x**self.config["exponent"]
+    if( self.config["type"] == 'rgb' ){
+        return rgb( 2*x*(1-x)**5 + 3.5*x**2*(1-x)**3 + 2.1*x*x*(1-x)**2 + 3.0*x**3*(1-x)**2 + x**0.5*(1-(1-x)**2),  \
+                    1.5*x**2*(1-x)**3 - 0.8*x**3*(1-x)**2 + 2.0*x**4*(1-x) + x**4,                                  \
+                    5*x*(1-x)**5 - 0.5*x**2*(1-x)**3 + 0.3*x*x*(1-x)**2 + 5*x**3*(1-x)**2 + 0.5*x**6 )
+    } else {
+        return hsb( 2*x*(1-x)**5 + 3.5*x**2*(1-x)**3 + 2.1*x*x*(1-x)**2 + 3.0*x**3*(1-x)**2 + x**0.5*(1-(1-x)**2),  \
+                    1.5*x**2*(1-x)**3 - 0.8*x**3*(1-x)**2 + 2.0*x**4*(1-x) + x**4,                                  \
+                    5*x*(1-x)**5 - 0.5*x**2*(1-x)**3 + 0.3*x*x*(1-x)**2 + 5*x**3*(1-x)**2 + 0.5*x**6 )
+    }
+}
+
+subroutine ColMapper.BPR(c1){
+    # Blue purple red
+    if( self.config["invert"] ){ c1 = 1.0 - c1; }
+    c1 = c1**self.config["exponent"]
+    if( self.config["type"] == 'rgb' ){
+        return rgb( c1,                             \
+                    0.0,                            \
+                    (1.0-c1)*self.config["brightness"]   )
+    } else {
+        return hsb( c1,                             \
+                    0,                              \
+                    (1.0-c1)*self.config["brightness"]   )
+    }
+}
+
+subroutine ColMapper.RainBow(x){
+    if( self.config["invert"] ){ x = 1.0 - x ; }
+    x = x**self.config["exponent"]
+    return ColMapper.gradient_hsb(hsb(0,1,1),hsb(2.0/3.0,1,1),x)
+}
+
+subroutine ColMapper.Jet(x){
+    if( self.config["invert"] ){ x = 1.0 - x ; }
+    x = x**self.config["exponent"]
+
+    if(x < 0.38){
+        r = 0
+    } else if(x < 0.62){
+        r =(x-0.38)/(0.62-0.38)
+    } else if(x < 0.87){
+        r = 1
+    } else{
+        r = 0.5 + 0.5*(1-x)/(1 - 0.87)
+    }
+
+    if( x < 0.13){
+        g = 0
+    } else if(x < 0.38){
+        g = (x-0.13)/(0.38-0.13)
+    } else if(x < 0.62){
+        g = 1
+    } else if(x < 0.87){
+        g = (0.87 - x)/(0.87 - 0.62)
+    } else {
+        g = 0
+    }
+
+    if(x < 0.13){
+        b = 0.5 + 0.5*x/0.13
+    } else if(x < 0.38){
+        b = 1
+    } else if(x < 0.62){
+        b = 1 - (x - 0.38)/(0.62 - 0.38)
+    } else {
+        b = 0
+    }
+
+    if( self.config["type"] == 'rgb' ){
+        return rgb( r, g, b )
+    } else {
+        return hsb( r, g, b )
+    }
+}

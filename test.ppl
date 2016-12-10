@@ -1,0 +1,21 @@
+set term png dpi 1000
+set o "test.png"
+
+set size 6 square
+set key below
+set xlabel "$x$"
+set ylabel "$y$"
+
+set xtick -4,1,4
+set ytick -4,1,4
+set samples grid 300x300
+
+load 'ColMapper.ppl'
+cmap = ColMapper();
+cmap.init( {'type': 'rgb', 'rgbformulae': [7,5,15], 'invert': false } );
+
+set colmap cmap.Jet(c1)
+set c1tics -10,2,10
+g(x,y) = 5.0*sin(2.0*x)+3*cos(3.0*y)
+h(x,y) = 2*(sin(x) + sin(y))+5
+plot [-3:3][-3:3] g(x,y) w colormap, g(x,y) w contourmap
